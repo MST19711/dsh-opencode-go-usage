@@ -1,0 +1,31 @@
+{
+  "name": "@deepseek-ai/dsh-opencode-go-usage",
+  "description": "OpenCode Go remaining-quota widget for the DeepSeek Harness Web UI: a floating card on the right edge showing live remaining percentages for the 5h / weekly / monthly quota windows, visible only while the current model routes through OpenCode Go.",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib",
+    "cordis.patch.yml"
+  ],
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [],
+      "platform": "web"
+    }
+  }
+}
