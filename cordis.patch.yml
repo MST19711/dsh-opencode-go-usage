@@ -1,7 +1,9 @@
-# Bundle patch layer for @deepseek-ai/dsh-opencode-go-usage.
+# Bundle patch layer for @deepseek-ai/dsh-balance-panel.
 #
 # 由 profile 组合器按 dsh.profile.bundles 顺序应用:注册本插件的加载行。
 # 安装后无需手动编辑 profile 的补丁文件。
+# (v0.1.0 时期本包名为 @deepseek-ai/dsh-opencode-go-usage;v0.2.0 起改为
+#  可扩展的余额面板 @deepseek-ai/dsh-balance-panel。)
 - insert:
-    - id: dsh-opencode-go-usage
-      name: '@deepseek-ai/dsh-opencode-go-usage'
+    - id: dsh-balance-panel
+      name: '@deepseek-ai/dsh-balance-panel'

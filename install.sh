@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Official installer for @deepseek-ai/dsh-opencode-go-usage.
+# Official installer for @deepseek-ai/dsh-balance-panel (v0.2.0 起的本包名;
+# v0.1.0 为 @deepseek-ai/dsh-opencode-go-usage)。
 #
 # Uses the documented `dsh plugin add` flow (`dsh plugin` is a thin pnpm
 # forwarder). The package declares `dsh.bundle.patch` (its own
@@ -15,7 +16,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROFILE="${PROFILE:-web}"
-NAME="@deepseek-ai/dsh-opencode-go-usage"
+NAME="@deepseek-ai/dsh-balance-panel"
 
 # ── 0) prerequisites ─────────────────────────────────────────────────────────
 if ! command -v dsh >/dev/null 2>&1; then
@@ -26,12 +27,12 @@ fi
 # ── 1) resolve the tarball ───────────────────────────────────────────────────
 TGZ="${1:-}"
 if [ -z "$TGZ" ]; then
-  TGZ="$(ls -t "$SCRIPT_DIR"/deepseek-ai-dsh-opencode-go-usage-*.tgz 2>/dev/null | head -1 || true)"
+  TGZ="$(ls -t "$SCRIPT_DIR"/deepseek-ai-dsh-balance-panel-*.tgz 2>/dev/null | head -1 || true)"
 fi
 if [ -z "$TGZ" ] || [ ! -f "$TGZ" ]; then
   echo "[pack] 未找到 tarball,先执行 npm pack …"
   (cd "$SCRIPT_DIR" && npm pack --silent)
-  TGZ="$(ls -t "$SCRIPT_DIR"/deepseek-ai-dsh-opencode-go-usage-*.tgz | head -1)"
+  TGZ="$(ls -t "$SCRIPT_DIR"/deepseek-ai-dsh-balance-panel-*.tgz | head -1)"
 fi
 TGZ="$(realpath "$TGZ")"
 echo "tarball : $TGZ"

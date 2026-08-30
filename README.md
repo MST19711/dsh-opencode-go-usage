@@ -1,81 +1,66 @@
-# Go Meter — DSH 的 OpenCode Go 剩余额度实时小窗
+# Balance Panel — DSH 的可扩展余额/用量面板
 
-> 产品名 **Go Meter**;npm 包名 / 仓库名 `@deepseek-ai/dsh-opencode-go-usage`。介绍文案见 [GITHUB_INTRO.md](GITHUB_INTRO.md)。
+> 产品名 **Balance Panel(余额面板)**;npm 包名 / 仓库名 `@deepseek-ai/dsh-balance-panel`。
+> 本项目由 [Go Meter(v0.1.0,OpenCode Go 专用额度小窗)](RELEASE_NOTES-v0.1.0.md)泛化而来:
+> v0.2.0 起是**多后端可扩展**的余额面板,OpenCode Go 只是内置后端之一。
 
-当当前会话使用的模型来自 **OpenCode Go** 订阅时,在 DSH Web 界面**右侧边缘**显示一个常驻小窗,实时展示三个配额窗口的剩余额度:
+当当前会话使用的模型命中某个已接入后端时,在 DSH Web 界面**右侧边缘**显示一张常驻小窗;
+切换到未接入的 provider 时自动隐藏。**面板内容按当前 provider 自动选择,同一时刻只显示一张。**
 
-- **5h 滚动**(rolling):最近 5 小时滚动窗口
-- **本周**(weekly):自然周
-- **本月**(monthly):自然月/订阅周期
+## 内置后端
 
-每行显示「剩余百分比 + 重置倒计时」,行下为绿色进度条(自左向右表示剩余比例);剩余 ≤30% 转橙,≤10% 转红。模型切换到其他 provider 时小窗自动隐藏。
+| 后端 | 认领的 provider 路由 | 语义 | 展示 |
+|---|---|---|---|
+| `opencode-go` | id `opencode-go`,或 baseURL 指向 `opencode.ai/zen` 的自定义路由 | 订阅配额(有窗口、有重置) | 5h 滚动 / 本周 / 本月三行「剩余百分比 + 重置倒计时 + 进度条」;剩 ≤30% 橙、≤10% 红 |
+| `zhipu` | id `zhipu`,或 baseURL 指向 `bigmodel.cn` 的路由(含被改到按量计费端点的 `zai-coding-cn` —— 同一现金池) | 按量计费现金余额(**无配额窗口,不存在「剩余比例」语义**) | 纯金额行:可用余额(加粗)/ 累计充值 / 累计消费;赠送、冻结、今日消费仅在非零/有值时出现;徽章圆点按绝对余额提醒(<¥10 红、<¥50 橙) |
 
-## 特性
+## 扩展一个新供应商
 
-- 📍 右侧浮层小窗(`shell.overlay` 官方加性席位),不遮挡任何列;可折叠为小徽章「Go 剩 xx%」
-- 🔄 自动刷新(默认 30s,可配 15/60/120s;会话切换、重连、切回前台时立即刷新)
-- ⚙️ 设置页可配:启用开关、provider id、刷新间隔、显示的窗口、默认折叠
-- 🔐 代理式数据通路:插件服务端半区经 DSH `credentials` 服务解析 API key,调 OpenCode 官方 `GET https://opencode.ai/zen/go/v1/usage`;**key 永不进入浏览器、不写日志**
-- 🛡️ 错误兜底:key 未配置 / 鉴权失败 / 未绑定订阅均给出可见错误并可重试;连续失败保留旧数据并标记「数据过期」
+在 `lib/index.js` 的 `BACKENDS` 数组里加一个后端对象即可,客户端零改动:
+
+```js
+{
+  id: 'my-provider',
+  displayName: 'My Provider',
+  cache: new TTLCache(60_000),                       // 上游结果缓存
+  matchesProvider(id, node) { ... },                 // settings providers 字典里认领路由
+  async resolvePanel(ctx, providerId, node) {        // 拉上游 → 归一化
+    return {
+      ok: true,
+      panel: {
+        title: 'My Provider',
+        rows: [ { label: '剩余', value: '…', bar: { fill: 42, tone: 'warn' } } ], // bar 可选
+        chip: { text: '…', tone: 'ok' },             // 折叠徽章文案与圆点
+        foot: '…',
+      },
+    };
+  },
+}
+```
+
+行结构 `{ label, value, strong?, bar?: { fill, tone } }`:`bar` 可选 —— 配额语义才带进度条,
+现金/余额类语义不要编造比例。
+
+## 数据通路与安全
+
+- 后端各自代理调用上游官方/控制台接口,API key 只经 DSH `credentials` 服务在服务端进程内解析,
+  **key 永不进入浏览器、不写日志**;
+- 各后端独立缓存(OpenCode Go 15s,智谱 5min),失败不缓存、下次轮询重试;
+- 路由有同源/loopback 防护,跨站读取返回 403。
 
 ## 界面
 
-- 小窗:右上角小卡片,标题 + 当前模型名 + 三窗口行(剩余% + 倒计时,行下进度条)+「更新于 HH:MM:SS」
-- 折叠态:右侧小圆点徽章「Go 剩 xx%」,点击展开
-- 设置:「设置 → OpenCode Go 额度」
+- 小窗:右上角卡片(标题 + 当前模型名 + 行 + 「更新于 HH:MM:SS · <后端注脚>」)+「刷新 / — 折叠」
+- 折叠态:圆点徽章(文案来自 `panel.chip`),点击展开
+- 设置:「设置 → 余额面板」:启用开关、刷新间隔(15/30/60/120s)、默认折叠
+- v0.1.0 的本地配置自动迁移到新存储键(`dsh-balance-panel:config`)
 
-## 安装(官方方式)
-
-前置:dsh 已安装且目标 profile(默认 `web`)在运行。本插件通过官方的 `dsh plugin add` 安装(`dsh plugin` 是 pnpm 的薄转发层);包内声明了 `dsh.bundle.patch`(自带 `cordis.patch.yml`),因此 **`plugin add` 一步即可完成安装,无需手动编辑任何 profile 配置**。
-
-```bash
-# 方式一:仓库脚本(自动 npm pack + dsh plugin add)
-bash install.sh
-
-# 方式二:手动执行官方命令
-npm pack -y                        # 产物 deepseek-ai-dsh-opencode-go-usage-<ver>.tgz
-dsh --profile web plugin add ./deepseek-ai-dsh-opencode-go-usage-<ver>.tgz
-```
-
-安装成功后**重启 dsh**(让 profile 重新组合 bundle 层),刷新浏览器即可看到小窗。
-
-## 验证
-
-重启并刷新页面后:
-
-- 当前会话模型为 `opencode-go`(或 baseURL 指向 opencode.ai/zen 的 provider)→ 右侧出现小窗,三窗口数值应与 opencode.ai 工作区页面一致;
-- `/model` 切到其它 provider → 小窗消失,切回恢复;
-- 命令行核对(把 `<dsh-address>` 换成你实际访问 dsh 的地址):
-  ```bash
-  # 客户端插件已加载(应以 window.__ModuleLoader__.load( 开头)
-  curl -s http://<dsh-address>/plugins/@deepseek-ai/dsh-opencode-go-usage/client.js | head -c 80
-  # 代理端点:ok:true 且三窗口数值与 opencode.ai 工作区页面一致
-  curl -s http://<dsh-address>/dsh-opencode-go-usage/usage
-  ```
-
-## 数据来源与口径
-
-- 上游:OpenCode 官方(未文档化)用量接口 `GET https://opencode.ai/zen/go/v1/usage`,鉴权 `Authorization: Bearer <key>`(另带 `x-api-key`);返回三个窗口 `{status, percent, resetsAt}`,`percent` 为**已用百分比**,小窗显示**剩余 = 100 − percent**。
-- 接口由社区经 [cc-switch#6433](https://github.com/farion1231/cc-switch/issues/6433)(2026-08-13) 公开,OpenCodeMonitor 等项目生产使用;未写入官方文档,若上游变更地址,改 `lib/index.js` 顶部 `USAGE_URL` 常量即可。
-- Provider 识别:DSH settings 中 id 为 `opencode-go` 的 provider,或自定义 provider 的 baseURL 含 `opencode.ai/zen`;取其 `apiKeyEnv` 指向的凭据(dsh-credentials 解析,支持 env/文件)。
-- 服务端 15s 缓存 + 单飞去重,轮询不会打爆上游。
-
-## 卸载(官方方式)
+## 安装
 
 ```bash
-dsh --profile web plugin remove @deepseek-ai/dsh-opencode-go-usage
+bash install.sh          # npm pack + dsh plugin add(默认 web profile)
 ```
 
-随后重启 dsh 并刷新页面;`plugin remove` 会自动把本插件从 `dsh.profile.bundles` 层移除(不再加载),无需手动清理配置。
-
-## 打包与发布
-
-```bash
-npm pack          # 产物 deepseek-ai-dsh-opencode-go-usage-<ver>.tgz(已被 .gitignore 排除,不入库)
-```
-
-发布到 npm 前把 `package.json` 的 `"private": true` 去掉;GitHub 仓库发布无需改动。
-
-## License
-
-[MIT](LICENSE.md)
+从 v0.1.0 升级:先 `pnpm --dir ~/.dsh/profiles/web remove @deepseek-ai/dsh-opencode-go-usage`,
+再运行上面的安装脚本,并把 profile `dsh.profile.bundles` 里的旧包名替换为
+`@deepseek-ai/dsh-balance-panel`。重启 DSH 后生效。

@@ -1,7 +1,7 @@
 {
-  "name": "@deepseek-ai/dsh-opencode-go-usage",
-  "description": "OpenCode Go remaining-quota widget for the DeepSeek Harness Web UI: a floating card on the right edge showing live remaining percentages for the 5h / weekly / monthly quota windows, visible only while the current model routes through OpenCode Go.",
-  "version": "0.1.0",
+  "name": "@deepseek-ai/dsh-balance-panel",
+  "description": "Extensible balance/usage panel for the DeepSeek Harness Web UI: a floating card on the right edge that auto-selects a backend by the current session's provider. Backends: OpenCode Go (subscription quota windows with progress bars) and Zhipu open platform (pay-as-you-go cash balance, money-only rows). Adding a provider = registering one backend object.",
+  "version": "0.2.0",
   "private": true,
   "license": "MIT",
   "type": "module",
